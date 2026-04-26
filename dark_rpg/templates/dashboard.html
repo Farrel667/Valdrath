@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Sanctum — Valdrath{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+
+    <div class="dashboard-header">
+        <div class="dashboard-header__sigil" aria-hidden="true">{{ cls.icon }}</div>
+        <div>
+            <h1 class="dashboard-title">{{ user.username }}</h1>
+            <p class="dashboard-class">{{ user.char_class | capitalize }} · The Bound</p>
+        </div>
+    </div>
+
+    <!-- Stats panel -->
+    <div class="stats-panel">
+        <div class="stat-block">
+            <div class="stat-label">Vitality</div>
+            <div class="stat-bar-wrap">
+                <div class="stat-bar stat-bar--hp"
+                     style="width: {{ [(user.hp / user.max_hp * 100)|int, 100]|min }}%"></div>
+            </div>
+            <div class="stat-value">{{ user.hp }} / {{ user.max_hp }}</div>
+        </div>
+        <div class="stat-block stat-block--small">
+            <div class="stat-label">Class</div>
+            <div class="stat-value stat-value--big">{{ cls.icon }} {{ user.char_class|capitalize }}</div>
+        </div>
+        <div class="stat-block stat-block--small">
+            <div class="stat-label">Attack</div>
+            <div class="stat-value stat-value--big attack-val">{{ user.attack }}</div>
+        </div>
+        <div class="stat-block stat-block--small">
+            <div class="stat-label">Current Node</div>
+            <div class="stat-value stat-value--dim">{{ user.current_node }}</div>
+        </div>
+    </div>
+
+    <!-- Call to action cards -->
+    <div class="dashboard-actions">
+
+        {% if user.hp <= 0 %}
+        <div class="action-card action-card--danger">
+            <div class="action-card__icon">💀</div>
+            <h2 class="action-card__title">Fallen</h2>
+            <p class="action-card__desc">
+                You fell to the Veil. Your story is not yet over —
+                but this chapter must be closed before you write the next.
+            </p>
+            <form method="POST" action="{{ url_for('restart_game') }}">
+                <button class="btn btn--danger btn--full">Restart Your Journey</button>
+            </form>
+        </div>
+
+        {% elif user.current_node == 'start' %}
+        <div class="action-card action-card--new">
+            <div class="action-card__icon">🌑</div>
+            <h2 class="action-card__title">New Journey</h2>
+            <p class="action-card__desc">
+                The Veil grows. Valdrath burns. You are the last Bound.
+                Your story has not yet begun.
+            </p>
+            <a href="{{ url_for('game') }}" class="btn btn--primary btn--full">Begin</a>
+        </div>
+
+        {% else %}
+        <div class="action-card action-card--continue">
+            <div class="action-card__icon">⚔️</div>
+            <h2 class="action-card__title">Continue</h2>
+            <p class="action-card__desc">
+                Your journey through the Veil is saved.
+                The shadows wait exactly where you left them.
+            </p>
+            <a href="{{ url_for('game') }}" class="btn btn--primary btn--full">Resume Journey</a>
+        </div>
+        {% endif %}
+
+        {% if user.hp > 0 and user.current_node != 'start' %}
+        <div class="action-card action-card--restart">
+            <div class="action-card__icon">🔁</div>
+            <h2 class="action-card__title">Start Over</h2>
+            <p class="action-card__desc">
+                Abandon your current progress and face the Veil from the beginning.
+                All choices will be reset.
+            </p>
+            <form method="POST" action="{{ url_for('restart_game') }}"
+                  onsubmit="return confirm('Abandon all progress and restart?')">
+                <button class="btn btn--ghost btn--full">Restart Journey</button>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Lore blurb -->
+    <div class="lore-card">
+        <h3 class="lore-title">The World</h3>
+        <p class="lore-text">
+            Three years ago, <strong>King Aldrath III</strong> opened a door that should never have been opened.
+            The Veil — a darkness older than the kingdom itself — answered his invitation and consumed
+            <em>Valdrath</em> in a single night. All who faced it fell or were corrupted. All except the
+            <strong>Bound</strong>: warriors marked by the Old Gods, immune to shadow's touch.
+        </p>
+        <p class="lore-text">
+            You are the last of them. The Veil is growing. If it breaches the mountains,
+            the rest of the world will follow.
+        </p>
+    </div>
+
+</div>
+{% endblock %}

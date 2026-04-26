@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}{{ node.title }} — Valdrath{% endblock %}
+
+{% block content %}
+
+<!-- ── VFX LAYER ─────────────────────────────────────────────────────────── -->
+<div id="vfx-overlay"   aria-hidden="true"></div>
+<div id="vfx-particles" aria-hidden="true"></div>
+<div id="vfx-popup"     aria-hidden="true"></div>
+
+{% if last_vfx %}
+<script>window.LAST_VFX = {{ last_vfx | tojson }};</script>
+{% endif %}
+
+<div class="game-wrapper">
+
+    <!-- ── PLAYER HUD ─────────────────────────────────────────────────────── -->
+    <aside class="hud">
+        <div class="hud__class">{{ cls.icon }} {{ user.char_class|capitalize }}</div>
+        <div class="hud__name">{{ user.username }}</div>
+
+        <div class="hud__stat">
+            <div class="hud__stat-label">
+                Vitality
+                <span class="hud__stat-numbers">{{ user.hp }}/{{ user.max_hp }}</span>
+            </div>
+            <div class="hud__bar-track">
+                <div class="hud__bar hud__bar--hp" style="width: {{ hp_pct }}%"></div>
+            </div>
+        </div>
+
+        <div class="hud__stat">
+            <div class="hud__stat-label">Attack Power</div>
+            <div class="hud__attack">⚔ {{ user.attack }}</div>
+        </div>
+
+        {% if user.in_combat %}
+        <div class="hud__stat hud__stat--enemy">
+            <div class="hud__stat-label">
+                Enemy HP
+                <span class="hud__stat-numbers">{{ user.enemy_hp }}</span>
+            </div>
+            <div class="hud__bar-track">
+                <div class="hud__bar hud__bar--enemy" style="width: {{ enemy_hp_pct }}%"></div>
+            </div>
+        </div>
+
+        <!-- Skill cooldown tracker in HUD -->
+        {% if skills %}
+        <div class="hud__cooldowns">
+            <div class="hud__cd-header">Skills</div>
+            {% for skill in skills %}
+            {% set cd = cooldowns.get(skill.key, 0) %}
+            <div class="hud__cd-row {% if cd > 0 %}is-cooling{% endif %}"
+                 style="--skill-color: {{ skill.color }}">
+                <span class="hud__cd-icon">{{ skill.icon }}</span>
+                <span class="hud__cd-name">{{ skill.name }}</span>
+                {% if cd > 0 %}
+                    <span class="hud__cd-badge hud__cd-badge--cooling">✕ {{ cd }}</span>
+                {% else %}
+                    <span class="hud__cd-badge hud__cd-badge--ready">✓</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="hud__divider"></div>
+
+        <form method="POST" action="{{ url_for('restart_game') }}"
+              onsubmit="return confirm('Restart and lose all progress?')">
+            <button type="submit" class="btn btn--ghost btn--xs">↩ Restart</button>
+        </form>
+    </aside>
+
+    <!-- ── NARRATIVE PANEL ────────────────────────────────────────────────── -->
+    <section class="narrative-panel">
+
+        <header class="narrative-header">
+            <div class="narrative-act">
+                {% if user.in_combat %}
+                    <span class="act-badge act-badge--combat">⚔ Combat</span>
+                {% elif node.node_type == 'ending' %}
+                    <span class="act-badge act-badge--ending">★ Ending</span>
+                {% else %}
+                    <span class="act-badge">Chapter</span>
+                {% endif %}
+            </div>
+            <h2 class="narrative-title">
+                {% if user.in_combat %}{{ user.enemy_name }}{% else %}{{ node.title }}{% endif %}
+            </h2>
+        </header>
+
+        <!-- ═══════ COMBAT MODE ═══════════════════════════════════════════ -->
+        {% if user.in_combat %}
+
+        <!-- Arena -->
+        <div class="combat-arena" id="combat-arena">
+            <div class="arena-bg" aria-hidden="true"></div>
+
+            <div class="combat-entity combat-entity--enemy" id="entity-enemy">
+                <div class="entity-aura entity-aura--enemy"></div>
+                <div class="entity-glyph">{{ enemy_glyph }}</div>
+                <div class="entity-name">{{ user.enemy_name }}</div>
+                <div class="entity-hp-bar">
+                    <div class="entity-hp-fill" id="enemy-hp-fill"
+                         style="width: {{ enemy_hp_pct }}%"></div>
+                </div>
+                <div class="entity-hp-num">{{ user.enemy_hp }} HP</div>
+            </div>
+
+            <div class="combat-vs-col">
+                <div class="combat-vs">VS</div>
+            </div>
+
+            <div class="combat-entity combat-entity--player" id="entity-player">
+                <div class="entity-aura entity-aura--player"></div>
+                <div class="entity-glyph">{{ cls.icon }}</div>
+                <div class="entity-name">{{ user.username }}</div>
+                <div class="entity-hp-bar">
+                    <div class="entity-hp-fill entity-hp-fill--player" id="player-hp-fill"
+                         style="width: {{ hp_pct }}%"></div>
+                </div>
+                <div class="entity-hp-num {% if hp_pct <= 25 %}entity-hp-num--critical{% endif %}">
+                    {{ user.hp }} HP
+                </div>
+            </div>
+        </div>
+
+        <!-- Combat log -->
+        {% if combat_log %}
+        <div class="combat-log" id="combat-log">
+            {% for entry in combat_log %}
+            <div class="log-entry">{{ entry|safe }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ── BASIC ACTIONS ─────────────────────────────────────────── -->
+        <div class="combat-section-label">Basic Actions</div>
+        <div class="combat-actions">
+
+            <form method="POST" action="{{ url_for('combat_action') }}" class="combat-form">
+                <input type="hidden" name="action" value="attack">
+                <button type="submit" class="btn btn--combat btn--attack"
+                        data-vfx="attack" data-color="#e8b420" data-label="Strike">
+                    <span class="btn-icon">⚔</span>
+                    <span class="btn-main">Strike</span>
+                    <span class="btn-sub">Full damage · enemy retaliates</span>
+                </button>
+            </form>
+
+            <form method="POST" action="{{ url_for('combat_action') }}" class="combat-form">
+                <input type="hidden" name="action" value="defend">
+                <button type="submit" class="btn btn--combat btn--defend"
+                        data-vfx="defend" data-color="#6ee7b7" data-label="Guard">
+                    <span class="btn-icon">🛡</span>
+                    <span class="btn-main">Guard</span>
+                    <span class="btn-sub">Halved damage · riposte counter</span>
+                </button>
+            </form>
+
+        </div>
+
+        <!-- ── CLASS SKILLS ──────────────────────────────────────────── -->
+        {% if skills %}
+        <div class="combat-section-label">Class Skills</div>
+        <div class="skills-grid">
+
+            {% for skill in skills %}
+            {% set cd = cooldowns.get(skill.key, 0) %}
+            {% set on_cd = cd > 0 %}
+
+            <form method="POST" action="{{ url_for('combat_action') }}"
+                  class="skill-form {% if on_cd %}skill-form--cooling{% endif %}">
+                <input type="hidden" name="action" value="skill:{{ skill.key }}">
+
+                <button type="submit"
+                        class="btn--skill {% if on_cd %}btn--skill-cd{% endif %}"
+                        style="--skill-col: {{ skill.color }}"
+                        {% if on_cd %}disabled{% endif %}
+                        data-vfx="{{ skill.vfx }}"
+                        data-color="{{ skill.color }}"
+                        data-label="{{ skill.name }}">
+
+                    <!-- Cooldown locked state -->
+                    {% if on_cd %}
+                    <div class="skill-locked">
+                        <div class="skill-locked-top">
+                            <span class="skill-icon skill-icon--dim">{{ skill.icon }}</span>
+                            <div class="skill-info">
+                                <span class="skill-name-text skill-name--dim">{{ skill.name }}</span>
+                                <span class="skill-flavor">{{ skill.flavor }}</span>
+                            </div>
+                        </div>
+                        <div class="skill-cd-banner">
+                            <span class="skill-cd-x">✕</span>
+                            <span class="skill-cd-turns">ON COOLDOWN — {{ cd }} turn{% if cd != 1 %}s{% endif %} remaining</span>
+                            <div class="skill-cd-pip-bar">
+                                <div class="skill-cd-pip-fill"
+                                     style="width: {{ (cd / skill.cooldown * 100)|int }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- Ready state -->
+                    <div class="skill-ready-shimmer"></div>
+                    <div class="skill-top">
+                        <span class="skill-icon">{{ skill.icon }}</span>
+                        <div class="skill-info">
+                            <span class="skill-name-text">{{ skill.name }}</span>
+                            <span class="skill-flavor">{{ skill.flavor }}</span>
+                        </div>
+                        <div class="skill-ready-badge">READY</div>
+                    </div>
+                    <div class="skill-bottom">
+                        <div class="skill-dmg-badge" style="color: {{ skill.color }}">
+                            {{ (skill.damage_mult * 100)|int }}% ATK
+                        </div>
+                        <div class="skill-cd-info">{{ skill.cooldown }}-turn CD</div>
+                    </div>
+                    {% endif %}
+
+                </button>
+            </form>
+            {% endfor %}
+
+        </div>
+        {% endif %}
+
+        <!-- ═══════ STORY MODE ════════════════════════════════════════════ -->
+        {% else %}
+
+        {% if combat_log %}
+        <div class="combat-log combat-log--victory" id="combat-log">
+            {% for entry in combat_log %}
+            <div class="log-entry">{{ entry|safe }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="narrative-text" id="narrative-text">
+            {{ node.text|safe }}
+        </div>
+
+        {% if node.node_type == 'ending' %}
+        <div class="ending-actions">
+            <p class="ending-prompt">Your legend is written.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn--primary">Return to Sanctum</a>
+            <form method="POST" action="{{ url_for('restart_game') }}" style="display:inline;">
+                <button class="btn btn--ghost">Begin Anew</button>
+            </form>
+        </div>
+
+        {% elif node.choices %}
+        <div class="choices-container">
+            <p class="choices-prompt">What will you do?</p>
+            {% for choice in node.choices %}
+            <form method="POST" action="{{ url_for('game_action') }}" class="choice-form">
+                <input type="hidden" name="choice" value="{{ loop.index0 }}">
+                <button type="submit" class="btn btn--choice">
+                    <span class="choice-glyph">{{ loop.index }}</span>
+                    <span class="choice-text">{{ choice.text }}</span>
+                    <span class="choice-arrow">→</span>
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="choices-container">
+            <p class="choices-prompt"><em>The path ends here.</em></p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn--primary">Return to Sanctum</a>
+        </div>
+        {% endif %}
+
+        {% endif %}
+
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Staggered narrative reveal
+(function() {
+    const el = document.getElementById('narrative-text');
+    if (!el) return;
+    el.querySelectorAll('p, h1, h2, h3, hr').forEach((p, i) => {
+        p.style.opacity   = '0';
+        p.style.transform = 'translateY(12px)';
+        p.style.transition = `opacity 0.5s ease ${150+i*110}ms, transform 0.5s ease ${150+i*110}ms`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            p.style.opacity   = '1';
+            p.style.transform = 'translateY(0)';
+        }));
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Fallen — Valdrath{% endblock %}
+
+{% block content %}
+<div class="gameover-wrapper">
+
+    <div class="gameover-skull" aria-hidden="true">💀</div>
+
+    <h1 class="gameover-title">You Have Fallen</h1>
+    <p class="gameover-sub">
+        The Veil claims another soul. <strong>{{ user.username }}</strong> — 
+        {{ cls.icon }} {{ user.char_class|capitalize }} — fought until the end.
+    </p>
+
+    <div class="gameover-epitaph">
+        <p>
+            <em>The shadows close over another name. The sigil on your wrist dims,
+            the golden light guttering like a candle in a storm. The Bound are fewer still.</em>
+        </p>
+        <p>
+            <em>But the Veil remembers those who defied it. Your name is burned into its dark heart,
+            a wound that will not heal. This is not nothing. This is not nothing.</em>
+        </p>
+    </div>
+
+    <div class="gameover-stats">
+        <div class="go-stat">
+            <div class="go-stat__label">Class</div>
+            <div class="go-stat__value">{{ cls.icon }} {{ user.char_class|capitalize }}</div>
+        </div>
+        <div class="go-stat">
+            <div class="go-stat__label">Final Attack</div>
+            <div class="go-stat__value">{{ user.attack }}</div>
+        </div>
+        <div class="go-stat">
+            <div class="go-stat__label">Last Seen</div>
+            <div class="go-stat__value go-stat__value--dim">{{ user.current_node.replace('_', ' ').title() }}</div>
+        </div>
+    </div>
+
+    <div class="gameover-actions">
+        <form method="POST" action="{{ url_for('restart_game') }}">
+            <button class="btn btn--primary btn--lg">
+                Rise Again
+            </button>
+        </form>
+        <a href="{{ url_for('dashboard') }}" class="btn btn--ghost">Return to Sanctum</a>
+    </div>
+
+</div>
+{% endblock %}

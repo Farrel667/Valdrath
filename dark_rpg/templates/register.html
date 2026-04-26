@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Forge Your Legend — Valdrath{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+
+    <div class="auth-sigil" aria-hidden="true">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--purple)" stroke-width="1" opacity="0.5"/>
+            <line x1="60" y1="10" x2="60" y2="110" stroke="var(--purple)" stroke-width="0.5" opacity="0.3"/>
+            <line x1="10" y1="60" x2="110" y2="60" stroke="var(--purple)" stroke-width="0.5" opacity="0.3"/>
+            <polygon points="60,20 76,52 110,57 86,80 91,114 60,97 29,114 34,80 10,57 44,52"
+                     fill="none" stroke="var(--purple)" stroke-width="1" opacity="0.5"/>
+        </svg>
+    </div>
+
+    <div class="auth-card auth-card--wide">
+        <h1 class="auth-title">Forge Your Legend</h1>
+        <p class="auth-subtitle">Choose your blood, choose your burden</p>
+
+        <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username" class="form-label">Bound Name</label>
+                    <input type="text" id="username" name="username" class="form-input"
+                           placeholder="Min. 3 characters" autocomplete="username" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="password" class="form-label">Blood Oath</label>
+                    <input type="password" id="password" name="password" class="form-input"
+                           placeholder="Min. 6 characters" autocomplete="new-password" required minlength="6">
+                </div>
+            </div>
+
+            <!-- Class selection -->
+            <div class="form-group">
+                <label class="form-label">Your Class</label>
+                <div class="class-grid">
+
+                    <label class="class-card" for="class-fighter">
+                        <input type="radio" id="class-fighter" name="char_class" value="fighter" checked>
+                        <div class="class-card__inner">
+                            <div class="class-icon">⚔️</div>
+                            <div class="class-name">Fighter</div>
+                            <div class="class-desc">{{ class_stats.fighter.description }}</div>
+                            <div class="class-stats">
+                                <span class="stat-pill">{{ class_stats.fighter.hp }} HP</span>
+                                <span class="stat-pill">{{ class_stats.fighter.attack }} ATK</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="class-card" for="class-tank">
+                        <input type="radio" id="class-tank" name="char_class" value="tank">
+                        <div class="class-card__inner">
+                            <div class="class-icon">🛡️</div>
+                            <div class="class-name">Tank</div>
+                            <div class="class-desc">{{ class_stats.tank.description }}</div>
+                            <div class="class-stats">
+                                <span class="stat-pill">{{ class_stats.tank.hp }} HP</span>
+                                <span class="stat-pill">{{ class_stats.tank.attack }} ATK</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="class-card" for="class-mage">
+                        <input type="radio" id="class-mage" name="char_class" value="mage">
+                        <div class="class-card__inner">
+                            <div class="class-icon">🔮</div>
+                            <div class="class-name">Mage</div>
+                            <div class="class-desc">{{ class_stats.mage.description }}</div>
+                            <div class="class-stats">
+                                <span class="stat-pill">{{ class_stats.mage.hp }} HP</span>
+                                <span class="stat-pill">{{ class_stats.mage.attack }} ATK</span>
+                            </div>
+                        </div>
+                    </label>
+
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full">
+                <span>Begin the Journey</span>
+                <svg class="btn-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </form>
+
+        <p class="auth-switch">
+            Already bound?
+            <a href="{{ url_for('login') }}" class="text-link">Return to darkness</a>
+        </p>
+    </div>
+
+</div>
+{% endblock %}
